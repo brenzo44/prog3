@@ -3,13 +3,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <strings.h>
+#include <string.h>
 
 #define BITMAP_DISK_BLOCK 0
 #define NUM_DIRECT_INODE_BLOCKS 12
 #define NUM_SINGLE_INDIRECT_BLOCKS 256
 #define MAX_FILENAME_SIZE 508
+#define DIRECTORY_SIZE_LIMIT 50
 
-//easy compiling: gcc -o filesystem filesystem.c softwaredisk.c
+/*
+ HEY! IDIOT! WHEN YOU'RE DONE! CHANGE ALL explicit_bzero BACK TO bzero AND ALL string.h TO strings.h! DON'T FORGET, DUMBASS.
+*/
+
+//global cached variables//
+int directory_size = 0;
+FSError fserror;
+
+//easy compiling: gcc -o main filesystem.c softwaredisk.c
 
 // Type for one inode.  Structure must be 32 bytes long.
 typedef struct Inode {
@@ -71,19 +82,31 @@ File open_file(char *name, FileMode mode){
 // mode READ_WRITE. The current file position is set at byte 0.
 // Returns NULL on error. Always sets 'fserror' global.
 File create_file(char *name){
+    if(directory_size == DIRECTORY_SIZE_LIMIT){
+        fserror = FS_EXCEEDS_MAX_FILE_SIZE;
+        return NULL;
+    }
     int index = -1;
     for (int i = 0; i <= SOFTWARE_DISK_BLOCK_SIZE; i++){
         if(mainMap.bytes[i] == 0){
             index = i;
+            mainMap.bytes[i] = 1;
             break;
         }
     }
-    mainMap.bytes[index] = 1;
-    mainMap.bytes[index+1] = 1;
+
+    directory_size++;
+    DirEntry dir;
+    dir.file_is_open = 0;
+    strcpy(dir.name, name);
+    write_sd_block(&dir, index);
+
     File created;
     created = malloc(sizeof(FileInternals));
     created->mode = READ_WRITE;
-    created->position = 10;
+    created->position = 0;
+    created->d = dir;
+    created->d_block = index;
 
     return created;
 
@@ -157,20 +180,17 @@ int main(){
         printf("%d", mainMap.bytes[i]);
     }
     printf("\n");
-    File new = create_file("yu");
-    create_file("yu");
-    create_file("yu");
-    create_file("yu");
+    File new = create_file("one");
+    create_file("two");
+    create_file("three");
+    create_file("four");
     for(int i = 0; i <= 20; i++){
         printf("%d", mainMap.bytes[i]);
     }
-    printf("\nthis is new: %d", new->position);
 
-    Inode node;
-    IndirectBlock block;
-    DirEntry dir;
-    FileInternals test;
-    printf("\nThis is the size of something: %d", sizeof(test));
+    DirEntry testDir;
+    int ret = read_sd_block(&testDir, 2);
+    printf("\nThis is what I found: %s", testDir.name);
     return 0;
 }
 
