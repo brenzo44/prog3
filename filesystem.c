@@ -54,7 +54,6 @@ typedef struct FileInternals {
   //Inode inode;                // cached inode
   //DirEntry d;                 // cached dir entry
   uint16_t d_block;           // block # for cached dir entry
-  char name[255];
 } FileInternals;
 
 FreeBitmap mainMap;
@@ -146,6 +145,8 @@ void fs_print_error(void){
 //main is in here for now just to make testing easy, we're gonna move to formatfs.c later
 int main(){
     init_software_disk();
+
+    //FOR NOW THIS IS USING BYTES, NOT BITS!! CHANGE IT!
     mainMap.bytes[0] = 1;
     write_sd_block(&mainMap, BITMAP_DISK_BLOCK); //NOT SURE HOW TO USE THIS! BUT IT'S GOTTA GO IN BLOCK 0!
     printf("This is the disk: %d\n", software_disk_size());
