@@ -49,12 +49,15 @@ typedef struct FreeBitmap {
   uint8_t bytes[SOFTWARE_DISK_BLOCK_SIZE];
 } FreeBitmap;
 
+//delete this later
+FreeBitmap mainMap;
+
 // main private file type
 typedef struct FileInternals {
   uint32_t position;          // current file position
   FileMode mode;              // access mode for file
-  //Inode inode;                // cached inode
-  //DirEntry d;                 // cached dir entry
+  Inode inode;                // cached inode
+  DirEntry d;                 // cached dir entry
   uint16_t d_block;           // block # for cached dir entry
 } FileInternals;
 
@@ -143,7 +146,6 @@ void fs_print_error(void){
 }
 //main is in here for now just to make testing easy, we're gonna move to formatfs.c later
 
-FreeBitmap mainMap;
 int main(){
     init_software_disk();
 
@@ -167,7 +169,8 @@ int main(){
     Inode node;
     IndirectBlock block;
     DirEntry dir;
-    printf("\nThis is the size of an inode: %d", sizeof(dir));
+    FileInternals test;
+    printf("\nThis is the size of something: %d", sizeof(test));
     return 0;
 }
 
