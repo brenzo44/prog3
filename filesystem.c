@@ -74,11 +74,5 @@ void fs_print_error(void){
 }
 
 
-int main(){
-    printf("Mark is a whore and bad at coding. As am I but he's big dumm");
-    return 0;
-}
-
-
 
 
