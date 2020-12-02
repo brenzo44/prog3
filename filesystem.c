@@ -5,16 +5,18 @@
 #include <stdint.h>
 
 #define BITMAP_DISK_BLOCK 0
+#define NUM_DIRECT_INODE_BLOCKS 12
+#define NUM_SINGLE_INDIRECT_BLOCKS 256
+#define MAX_FILENAME_SIZE 508
 
 //easy compiling: gcc -o filesystem filesystem.c softwaredisk.c
 
 // Type for one inode.  Structure must be 32 bytes long.
-/*typedef struct Inode {
+typedef struct Inode {
   uint32_t size;       // file size in bytes
   uint16_t b[NUM_DIRECT_INODE_BLOCKS+1];  // direct blocks + 1
                                           // indirect block
 } Inode;
-
 
 // type for one indirect block.  Structure must be
 // SOFTWARE_DISK_BLOCK_SIZE bytes (software disk block size).  Max
@@ -39,7 +41,7 @@ typedef struct DirEntry {
   uint8_t file_is_open;    // file is open
   uint16_t inode_idx;      // inode #
   char name[MAX_FILENAME_SIZE];  // null terminated ASCII filename
-} DirEntry;*/
+} DirEntry;
 
 // type for a one block bitmap.  Structure must be
 // SOFTWARE_DISK_BLOCK_SIZE bytes (software disk block size).
@@ -55,9 +57,6 @@ typedef struct FileInternals {
   //DirEntry d;                 // cached dir entry
   uint16_t d_block;           // block # for cached dir entry
 } FileInternals;
-
-FreeBitmap mainMap;
-
 
 // open existing file with pathname 'name' and access mode 'mode'.  Current file
 // position is set at byte 0.  Returns NULL on error. Always sets 'fserror' global.
@@ -143,6 +142,8 @@ void fs_print_error(void){
     
 }
 //main is in here for now just to make testing easy, we're gonna move to formatfs.c later
+
+FreeBitmap mainMap;
 int main(){
     init_software_disk();
 
@@ -162,6 +163,11 @@ int main(){
         printf("%d", mainMap.bytes[i]);
     }
     printf("\nthis is new: %d", new->position);
+
+    Inode node;
+    IndirectBlock block;
+    DirEntry dir;
+    printf("\nThis is the size of an inode: %d", sizeof(dir));
     return 0;
 }
 
