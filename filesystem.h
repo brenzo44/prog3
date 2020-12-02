@@ -25,6 +25,7 @@ typedef enum  {
   FS_IO_ERROR              // something really bad happened
 } FSError;
 
+
 // function prototypes for filesystem API
 
 // open existing file with pathname 'name' and access mode 'mode'.  Current file
