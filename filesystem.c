@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <strings.h>
 #include <string.h>
+#include <stdbool.h>
 
 #define BITMAP_DISK_BLOCK 0
 #define NUM_DIRECT_INODE_BLOCKS 12
@@ -77,23 +78,72 @@ typedef struct FileInternals {
 File open_file(char *name, FileMode mode){
  
 }
+// find index of first zero bit in a disk block.  Returns -1 if no
+// zero bit is found, otherwise returns the index of the zero bit.
+int32_t find_zero_bit(uint8_t *data) {
+  int32_t i, j;
+  int32_t freeidx=-1;
+
+  for (i=0; i < SOFTWARE_DISK_BLOCK_SIZE && freeidx < 0; i++) {
+    for (j=0; j <= 7 && freeidx < 0; j++) {
+      if ((data[i] & (1 << (7 - j))) == 0) {
+        freeidx=i*8+j;
+      }
+    }
+  }
+
+  return freeidx;
+}
+
+int returnZeroIndex(uint8_t byte){
+  uint8_t mask = 1;
+  for(uint8_t i = 0; i < 8; i++){
+    if(byte != (byte | (mask << i))){
+      return i;
+    }
+
+  }
+  return -1;
+}
+
 
 // create and open new file with pathname 'name' and (implied) access
 // mode READ_WRITE. The current file position is set at byte 0.
 // Returns NULL on error. Always sets 'fserror' global.
 File create_file(char *name){
+    fserror = 0;
     if(directory_size == DIRECTORY_SIZE_LIMIT){
         fserror = FS_EXCEEDS_MAX_FILE_SIZE;
         return NULL;
     }
-    int index = -1;
-    for (int i = 0; i <= SOFTWARE_DISK_BLOCK_SIZE; i++){
-        if(mainMap.bytes[i] == 0){
-            index = i;
-            mainMap.bytes[i] = 1;
-            break;
-        }
+    int32_t i, j;
+    int32_t index = -1; 
+    int32_t zeroIndex = -1;
+    for(int i = 0; i < SOFTWARE_DISK_BLOCK_SIZE; i++){
+      zeroIndex = returnZeroIndex(mainMap.bytes[i]);
+      if(zeroIndex >= 0){
+          index = (i * 8) + zeroIndex;
+          break;
+      }
     }
+    mainMap.bytes[index/8] |= 1 << (index%8);
+
+
+
+  //   for (i=0; i < SOFTWARE_DISK_BLOCK_SIZE && index < 0; i++) {
+  //     for (j=0; j <= 7 && index < 0; j++) {
+  //       if ((mainMap.bytes[i] & (1 << (7 - j))) == 0) {
+  //         index = i * 8 + j;
+  //         
+  //     }
+  //     //mainMap.bytes[i] |= (1 << (index % 8));
+  //   }
+  // }
+  //   //int index = find_zero_bit(mainMap.bytes);
+  //   //printf("Current: %d\n", index);
+  //   //mainMap.bytes[0] ^= 1UL << index;
+  //   mainMap.bytes[1/8] |= 1 << (index%1);
+  
 
     directory_size++;
     DirEntry dir;
@@ -173,21 +223,14 @@ int main(){
     init_software_disk();
 
     //FOR NOW THIS IS USING BYTES, NOT BITS!! CHANGE IT!
-    mainMap.bytes[0] = 1;
-    write_sd_block(&mainMap, BITMAP_DISK_BLOCK); //NOT SURE HOW TO USE THIS! BUT IT'S GOTTA GO IN BLOCK 0!
+    write_sd_block(&mainMap, BITMAP_DISK_BLOCK); //NOT SURE HOW TO USE THIS! BUT IT'S GOTTA GO IN BLOCK 5000!
     printf("This is the disk: %d\n", software_disk_size());
-    for(int i = 0; i <= 20; i++){
-        printf("%d", mainMap.bytes[i]);
-    }
     printf("\n");
     File new = create_file("one");
-    create_file("two");
-    create_file("three");
-    create_file("four");
-    for(int i = 0; i <= 20; i++){
-        printf("%d", mainMap.bytes[i]);
-    }
-
+    File new2 = create_file("two");
+    File new3 = create_file("three");
+    File new4 = create_file("four");
+    printf("\n Here's your indices! %d, %d, %d, %d", new->d_block, new2->d_block, new3->d_block, new4->d_block);
     DirEntry testDir;
     int ret = read_sd_block(&testDir, 2);
     printf("\nThis is what I found: %s", testDir.name);
