@@ -4,8 +4,7 @@
 #include "softwaredisk.h"
 #include "filesystem.h"
 
-/*int main(){
+int main(){
     init_software_disk();
-    create_file("yuh");
     return 0;
-}*/
+}

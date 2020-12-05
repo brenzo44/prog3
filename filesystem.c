@@ -1,3 +1,5 @@
+//Filesystem by Mark Crow and Brett Renz
+
 #include "filesystem.h"
 #include "softwaredisk.h"
 #include <stdio.h>
@@ -185,20 +187,6 @@ File create_file(char *name)
   int32_t inode_index = find_zero_bit(mainMap.bytes);
   mainMap.bytes[inode_index / 8] |= 1 << (inode_index % 8);
 
-  //   for (i=0; i < SOFTWARE_DISK_BLOCK_SIZE && index < 0; i++) {
-  //     for (j=0; j <= 7 && index < 0; j++) {
-  //       if ((mainMap.bytes[i] & (1 << (7 - j))) == 0) {
-  //         index = i * 8 + j;
-  //
-  //     }
-  //     //mainMap.bytes[i] |= (1 << (index % 8));
-  //   }
-  // }
-  //   //int index = find_zero_bit(mainMap.bytes);
-  //   //printf("Current: %d\n", index);
-  //   //mainMap.bytes[0] ^= 1UL << index;
-  //   mainMap.bytes[1/8] |= 1 << (index%1);
-
   //increase the directory size, set the necessary variables and store the entry
   directory_size++;
   DirEntry dir;
@@ -258,8 +246,17 @@ void close_file(File file)
 // 'fserror' global.
 unsigned long read_file(File file, void *buf, unsigned long numbytes)
 {
+  //ran out of time
   fserror = 0;
-  //no time to implement this, here is our pseudocode.
+  if(file->d.file_is_open == 0){
+    fserror = FS_FILE_NOT_OPEN;
+    return 0;
+  }
+  Inode inode = file->inode;
+  long current_pos = file->position % 512;
+  unsigned long blockIndex = (long) ceil((file->position) / 512);
+  int ret = read_sd_block(buf, inode.b[blockIndex]);
+  
   /*
     find position
     find which block of data we start in
@@ -281,27 +278,14 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 {
   fserror = 0;
   Inode inode = file->inode;
-  //[1 2 3 4 5 0 0 0 0 0 0]
-  //step 1: get file position
-  //step 2: figure out which index it goes to
-  //step 3: see if block at that index is full/half full
-  //step 4: if full, create new block at next available spot on disc and store index in inode
-  //if not full, write at it until full then create new block if needed
-  //done!
    
   unsigned long bytesWritten = 0;
   unsigned long bytesRemaining = numbytes;
   unsigned long position = (file->position) % 512;
-  unsigned long blockIndex = (long) ceil((file-> position) / 512);
+  unsigned long blockIndex = (long) ceil((file->position) / 512);
   char* block = malloc(sizeof(char)* 512);
-
-/* if (reamining bytees > bytes in bvlck){
-    unsigned long new block indeex = find the fucking zero 
-    flip the burch
-    inde array ++ 
-    write the block love letterrs
-}
-*/
+  
+  // error handling
   if (file->mode != READ_WRITE)
   {
     fserror = FS_FILE_READ_ONLY;
@@ -330,16 +314,17 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 
       } 
   }
-
+  // while there are still bytes to be written and not at the end of the file
   while(bytesRemaining > 0 && file->position < MAX_FILE_SIZE){
 
     unsigned long bytesWrittenThisRun = 0;
-    
+    // if the write is smaller than the data block or at the start 
     if(bytesRemaining < 512 || position != 0){
       read_sd_block(block, inode.b[blockIndex]);
       unsigned long bytesLeftInBlock = 512 - position;
       unsigned long tempBytes = 0;
       
+      //generate a new data block for writes that will require more than the bytes left in the current block
       if(bytesRemaining > bytesLeftInBlock){
         for(int i = 0; i < 13; i++){
           if(inode.b[i] == 0){
@@ -351,6 +336,8 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
         }
       }
 
+
+      // copy the data into the temporary block and write to the disk at the correct iNode
       if(bytesRemaining < bytesLeftInBlock){
         memcpy((block + position), buf, bytesRemaining);
         tempBytes = bytesRemaining;
@@ -366,12 +353,15 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
       
       bytesWrittenThisRun = tempBytes;
     }
+    // the data to be written is >= 512 and the position is 0
     else{
+      //perform the write if the data is exactly the size of the data block
       if(bytesRemaining == 512){
         memcpy(block, buf, 512);
         write_sd_block(block, inode.b[blockIndex]);
         bytesWrittenThisRun = 512;
       }
+      // the data is larger than the block and requires a new block to be generated to complete the write
       else{
         for(int i = 0; i < 13; i++){
           if(inode.b[i] == 0){
@@ -439,7 +429,7 @@ int delete_file(char *name)
   for (int i = 0; i <= DIRECTORY_SIZE_LIMIT; i++){
     if(!strcmp(dir_cache[i].name, name)){
       found_dir = dir_cache[i];
-      //does this work?
+
       bzero(&dir_cache, i);
     }
     else{
@@ -510,7 +500,7 @@ void fs_print_error(void) {
   }
 }
 //main is in here for now just to make testing easy, we're gonna move to formatfs.c later
-
+/*
 int main()
 {
   init_software_disk();
@@ -534,4 +524,4 @@ int main()
   fs_print_error();
   printf("\n Here's your indices! %d, %d, %d, %d", new->d_block, new2->d_block, new3->d_block, new4->d_block);
   return 0;
-}
+}*/
